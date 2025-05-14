@@ -12,7 +12,7 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest # Use a standard Ubuntu runner
 
-    # !!! IMPORTANT: Add permissions for the GITHUB_TOKEN for this job
+    # Grant permissions for the GITHUB_TOKEN for this job
     permissions:
       contents: read # Allow reading repository content
       pages: write     # Allow writing to GitHub Pages
@@ -32,13 +32,19 @@ jobs:
         run: npm install # Install your project dependencies
 
       - name: Build web app
-        run: npx expo export --platform web # Build the web version of the app (creates 'dist' folder)
+        # This command builds the web app and places the output in the 'dist' folder.
+        # The 'publicPath' in app.json is used here to generate correct asset paths in index.html.
+        run: npx expo export --platform web
 
       - name: Upload artifact
+        # This action uploads the contents of the specified path ('./dist')
+        # as a deployment artifact named 'github-pages' by default.
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Upload the 'dist' folder as the artifact
+          path: ./dist # Upload the 'dist' folder contents
 
       - name: Deploy to GitHub Pages
+        # This action deploys the 'github-pages' artifact to GitHub Pages.
+        # It should automatically handle deploying to the correct location for project sites.
         id: deployment
-        uses: actions/deploy-pages@v4 # Deploy the artifact to GitHub Pages
+        uses: actions/deploy-pages@v4
