@@ -1,0 +1,38 @@
+# .github/workflows/deploy-web.yml
+# This workflow builds and deploys the Expo web app to GitHub Pages.
+
+name: Deploy Web App to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master # Or main - the branch you push your code from
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest # Use a standard Ubuntu runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Checkout your repository code
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # Use Node.js version 20 (recommended LTS)
+          cache: npm # Cache npm dependencies
+
+      - name: Install dependencies
+        run: npm install # Install your project dependencies
+
+      - name: Build web app
+        run: npx expo export --platform web # Build the web version of the app (creates 'dist' folder)
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist # Upload the 'dist' folder as the artifact
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 # Deploy the artifact to GitHub Pages
