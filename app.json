@@ -27,8 +27,8 @@
       "favicon": "./assets/favicon.png",
       // !!! IMPORTANT: Configure the public path for web deployment !!!
       // This should be the name of your GitHub repository, surrounded by forward slashes.
-      "publicPath": "/YOUR-REPOSITORY-NAME/"
-      // Replace "YOUR-REPOSITORY-NAME" with the actual name of your GitHub repository (e.g., "/Dokkaigo/")
+      "publicPath": "/Dokkaigo/"
+      // Ensure this exactly matches your repository name with leading/trailing slashes.
     }
   }
 }
