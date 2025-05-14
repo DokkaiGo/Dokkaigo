@@ -1,14 +1,15 @@
-// App.js - This file sets up your app's navigation structure including the LevelSelectScreen.
+// App.js - This file sets up your app's navigation structure with default header for Dokkai.
 
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// Remove imports for Text, TouchableOpacity, View as they are no longer needed for header buttons here
+import { StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Import your screen components
 import LoginScreen from './LoginScreen'; // Import the LoginScreen component
 import DokkaiScreen from './DokkaiScreen'; // Import the DokkaiScreen component
-import LevelSelectScreen from './LevelSelectScreen'; // !!! IMPORTANT: Import the LevelSelectScreen component
+import LevelSelectScreen from './LevelSelectScreen'; // Import the LevelSelectScreen component
 
 // --- Define your navigation stack ---
 
@@ -25,9 +26,9 @@ function App() {
           component={LoginScreen} // The component for the Login screen
           options={{ headerShown: false }} // Hide the header bar on the login screen (optional but common)
         />
-        {/* !!! IMPORTANT: Add the Level Select Screen to the navigator !!! */}
+        {/* Level Select Screen */}
         <Stack.Screen
-          name="LevelSelect" // The name for the Level Select route - MUST MATCH the name used in navigation.navigate
+          name="LevelSelect" // The name for the Level Select route
           component={LevelSelectScreen} // The component for the Level Select screen
           options={{ title: 'Select Level' }} // Header title for Level Select screen
         />
@@ -36,21 +37,11 @@ function App() {
           name="Dokkai" // The name for the Dokkai route
           component={DokkaiScreen} // The component for the Dokkai screen
           options={({ navigation, route }) => ({ // Use a function for options to access navigation/route if needed
-            title: 'Dokkai(読解)', // Changed header title to Dokkai(読解)
-            headerRight: () => ( // Define the component for the right side of the header (NEXT button)
-              <TouchableOpacity
-                onPress={() => {
-                  // Placeholder for navigating to the next reading passage
-                  // In a real app, you'd load the next passage data and update the screen
-                  alert('NEXT Button Pressed! Load next passage here.'); // Show an alert for now
-                  // Example navigation to a 'NextReading' screen (if you create one):
-                  // navigation.navigate('NextReading');
-                }}
-                style={{ marginRight: 15 }} // Add some margin to the right of the button
-              >
-                <Text style={{ color: '#007BFF', fontSize: 16, fontWeight: 'bold' }}>NEXT</Text> {/* Button text style */}
-              </TouchableOpacity>
-            ),
+            title: `Dokkai ${route.params?.currentPassageIndex + 1 || 1}`, // Update title format based on route params if available
+            headerShown: true, // Ensure the default header is shown
+            // Remove headerRight and headerLeft definitions here
+            // headerRight: () => (...)
+            // headerLeft: () => (...)
           })}
         />
         {/* Add other screens to the stack here as you create them */}

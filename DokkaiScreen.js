@@ -1,141 +1,214 @@
-// DokkaiScreen.js - Reading Comprehension Screen with Local Content and Slightly More Grey Background
+// DokkaiScreen.js - Reading Comprehension Screen with Passage Loading, UI Nav Buttons, and Question Display
 
-import React, { useState } from 'react'; // Import useState to manage state
+import React, { useState, useEffect, useCallback } from 'react'; // Import useState, useEffect, and useCallback hooks
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'; // Import necessary components
 
-function DokkaiScreen({ navigation }) {
-  // --- Local Content ---
-  // Define the original reading comprehension text (replace with your actual text)
-  const originalDokkaiText = "きのう、わたしは ともだちと こうえんに いきました。こうえんで サンドイッチを たべて、ジュースを のみました。ともだちは いぬと あそびました。わたしは いぬが すきです。そのあと、ふたりで うちに かえりました。";
+// Import the passage data
+import dokkaiPassages from './dokkaiData';
 
-  // Define the translation of the reading comprehension text (replace with your actual translation)
-  const translatedDokkaiText = "Yesterday, I went to the park with my friend. At the park, we ate sandwiches and drank juice. My friend played with a dog. I like dogs. Later, the two of us went home.";
+function DokkaiScreen({ navigation, route }) { // Receive navigation and route props
 
-  // Define the multiple-choice options
-  const answerOptions = [
-    { key: 'A', text: 'みず' },
-    { key: 'B', text: 'ジュース' },
-    { key: 'C', text: 'コーヒー' },
-    { key: 'D', text: 'おちゃ' },
-  ];
+  // Get the selected level from the navigation parameters
+  const { selectedLevel } = route.params || { selectedLevel: 'N5' }; // Default to N5 if no level is passed
 
-  // Define the correct answer key (e.g., 'A', 'B', 'C', or 'D')
-  const correctAnswerKey = 'B'; // Set the correct answer key here
+  // Get the passages for the selected level
+  const passagesForLevel = dokkaiPassages[selectedLevel] || [];
 
-  // Get the text of the correct answer option for displaying in feedback
-  const correctAnswerText = answerOptions.find(option => option.key === correctAnswerKey)?.text || 'Unknown';
+  // State variable to track the current passage index
+  const [currentPassageIndex, setCurrentPassageIndex] = useState(0);
 
-  // Define the explanation for the correct answer
-  const explanationText = "In the passage:\nこうえんで サンドイッチを たべて、ジュースを のみました。\n→ \"We ate sandwiches and drank juice in the park.\"\nSo, the correct answer is ジュース.";
-  // --- End Local Content ---
-
-
-  // State variable to hold translated text (initially empty)
+  // State variables for the currently displayed passage's data
+  const [currentPassage, setCurrentPassage] = useState(null);
   const [translatedText, setTranslatedText] = useState('');
-
-  // State variable to hold the user's selected answer (initially null)
-  const [selectedAnswer, setSelectedAnswer] = useState(null); // Will store the selected option (e.g., 'A', 'B', 'C', 'D')
-
-  // State variable to track if the answer has been submitted
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-
-  // State variable to track if the explanation should be shown
   const [showExplanation, setShowExplanation] = useState(false);
+
+
+  // --- Passage Navigation Handlers ---
+
+  // Function to handle the NEXT button press (now on the UI)
+  // Use useCallback to memoize the function
+  const handleNextPassage = useCallback(() => {
+    console.log('DokkaiScreen: handleNextPassage called (UI button). Current index:', currentPassageIndex);
+
+    if (currentPassageIndex < passagesForLevel.length - 1) {
+      setCurrentPassageIndex(prevIndex => prevIndex + 1); // Use functional update for state
+      console.log('DokkaiScreen: Index incremented.');
+    } else {
+      console.log('DokkaiScreen: Already on the last passage.');
+      Alert.alert('Last Passage', `You are on the last passage for JLPT ${selectedLevel}.`);
+    }
+  }, [currentPassageIndex, passagesForLevel.length, selectedLevel]); // Dependencies for useCallback
+
+  // Function to handle the PREVIOUS button press (now on the UI)
+  // Use useCallback to memoize the function
+  const handlePreviousPassage = useCallback(() => {
+    console.log('DokkaiScreen: handlePreviousPassage called (UI button). Current index:', currentPassageIndex);
+
+    if (currentPassageIndex > 0) {
+      setCurrentPassageIndex(prevIndex => prevIndex - 1); // Use functional update for state
+      console.log('DokkaiScreen: Index decremented.');
+    } else {
+      console.log('DokkaiScreen: Already on the first passage.');
+      Alert.alert('First Passage', `You are on the first passage for JLPT ${selectedLevel}.`);
+    }
+  }, [currentPassageIndex, selectedLevel]); // Dependencies for useCallback
+
+  // --- End Passage Navigation Handlers ---
+
+
+  // useEffect hook to load the passage data and update header title
+  useEffect(() => {
+    console.log('DokkaiScreen: useEffect triggered. currentPassageIndex:', currentPassageIndex, 'passagesForLevel.length:', passagesForLevel.length);
+
+    if (passagesForLevel.length > 0 && currentPassageIndex < passagesForLevel.length) {
+      const passage = passagesForLevel[currentPassageIndex];
+      setCurrentPassage(passage);
+      console.log('DokkaiScreen: Loading passage with ID:', passage.id);
+
+      // Reset state for the new passage
+      setTranslatedText('');
+      setSelectedAnswer(null);
+      setIsSubmitted(false);
+      setShowExplanation(false);
+
+      // --- Update header title based on current passage index ---
+      // Use navigation.setOptions to update the title in the default header
+      navigation.setOptions({
+          title: `Dokkai ${currentPassageIndex + 1}`, // Set header title to "Dokkai X"
+          // Remove any header definition here as it's handled by default header in App.js
+          // header: () => (...)
+          // headerRight: () => (...)
+          // headerLeft: () => (...)
+          // Pass current passage index via route params for title update in App.js
+          params: {
+              ...route.params, // Keep existing params
+              currentPassageIndex: currentPassageIndex, // Pass current index
+          },
+      });
+
+    } else if (currentPassageIndex >= passagesForLevel.length && passagesForLevel.length > 0) {
+        console.log('DokkaiScreen: Reached end of level passages.');
+        Alert.alert('End of Level', `You have completed all passages for JLPT ${selectedLevel}.`);
+    } else if (passagesForLevel.length === 0) {
+        console.log('DokkaiScreen: No passages found for this level.');
+        Alert.alert('No Passages', `No Dokkai passages found for JLPT ${selectedLevel}.`);
+    }
+  }, [currentPassageIndex, selectedLevel, passagesForLevel.length, navigation]); // Dependencies
 
 
   // Function to handle Translate button press
   const handleTranslate = () => {
-    // Simply set the translatedText state to the pre-defined translation
-    setTranslatedText(translatedDokkaiText);
+    if (currentPassage && currentPassage.translatedText) {
+      setTranslatedText(currentPassage.translatedText);
+    }
   };
 
   // Function to handle Submit button press
   const handleSubmit = () => {
-    // Only allow submission if an answer is selected and not already submitted
-    if (selectedAnswer !== null && !isSubmitted) {
-        setIsSubmitted(true); // Mark as submitted
+    if (selectedAnswer !== null && !isSubmitted && currentPassage) {
+        setIsSubmitted(true);
 
-        // --- Check if the answer is correct ---
-        const isCorrect = selectedAnswer === correctAnswerKey;
+        const isCorrect = selectedAnswer === currentPassage.correctAnswerKey;
 
-        // --- Provide Feedback ---
         if (isCorrect) {
             Alert.alert('Correct!', 'Your answer is correct!');
-            setShowExplanation(false); // Hide explanation if correct
+            setShowExplanation(false);
         } else {
-            // If incorrect, show an alert and set state to show explanation
             Alert.alert(
                 'Incorrect',
-                `Your answer "${selectedAnswer}" is incorrect.`
+                `Your answer "${selectedAnswer}" is incorrect.\n\nPlease scroll down for Explanation`
             );
-            setShowExplanation(true); // Show explanation if incorrect
+            setShowExplanation(true);
         }
     } else if (selectedAnswer === null) {
-        // If no answer is selected
         Alert.alert('Submission Failed', 'Please select an answer before submitting.');
     }
-    // If already submitted, do nothing on button press
   };
 
   // Function to handle selecting an answer option
   const handleSelectAnswer = (answerKey) => {
-      // Only allow selecting if not already submitted
       if (!isSubmitted) {
-          setSelectedAnswer(answerKey); // Update the state with the key of the selected answer
-          setShowExplanation(false); // Hide explanation if user changes answer before submitting
+          setSelectedAnswer(answerKey);
+          setShowExplanation(false);
       }
   };
 
+
+  // If currentPassage is null (e.g., during initial loading or no passages), show a loading/empty state
+  if (!currentPassage) {
+      return (
+          <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading passage...</Text>
+          </View>
+      );
+  }
+
+  // --- Render the current passage UI ---
   return (
     <View style={styles.container}>
       {/* Scrollable area for the reading text and translated text */}
       <ScrollView style={styles.textContainer}>
-        {/* Display the original reading text */}
-        <Text style={styles.dokkaiText}>{originalDokkaiText}</Text>
+        {/* Display the original reading text from the current passage */}
+        <Text style={styles.dokkaiText}>{currentPassage.originalText}</Text>
 
         {/* Area to display translated text if available */}
-        {translatedText ? ( // Only show this Text component if translatedText is not empty
+        {translatedText ? (
           <View style={styles.translatedTextContainer}>
             <Text style={styles.translatedTextTitle}>Translation:</Text>
             <Text style={styles.translatedText}>{translatedText}</Text>
           </View>
-        ) : null} {/* Render nothing if translatedText is empty */}
+        ) : null}
+
+        {/* --- Question Text --- */}
+        {/* Display the question text from the current passage */}
+        <Text style={styles.questionText}>{currentPassage.question}</Text>
+        {/* --------------------- */}
+
 
         {/* --- Multiple Choice Answer Options --- */}
         <View style={styles.optionsContainer}>
             <Text style={styles.optionsTitle}>Choose your answer:</Text>
-            {answerOptions.map((option) => (
+            {/* Use answer options from the current passage */}
+            {currentPassage.answerOptions.map((option) => (
                 <TouchableOpacity
-                    key={option.key} // Unique key for each option
+                    key={option.key}
                     style={[
                         styles.optionButton,
-                        selectedAnswer === option.key && styles.selectedOptionButton, // Apply selected style if this option is selected
-                        isSubmitted && option.key === correctAnswerKey && styles.correctAnswer, // Highlight correct answer after submission
-                        isSubmitted && selectedAnswer === option.key && selectedAnswer !== correctAnswerKey && styles.incorrectAnswer // Highlight incorrect selected answer after submission
+                        selectedAnswer === option.key && styles.selectedOptionButton,
+                        isSubmitted && option.key === currentPassage.correctAnswerKey && styles.correctAnswer,
+                        isSubmitted && selectedAnswer === option.key && selectedAnswer !== currentPassage.correctAnswerKey && styles.incorrectAnswer
                     ]}
-                    onPress={() => handleSelectAnswer(option.key)} // Call handleSelectAnswer with the option's key
-                    disabled={isSubmitted} // Disable options after submission
+                    onPress={() => handleSelectAnswer(option.key)}
+                    disabled={isSubmitted}
                 >
                     <Text style={[
                         styles.optionButtonText,
-                        selectedAnswer === option.key && styles.selectedOptionButtonText, // Apply selected text style
-                        isSubmitted && option.key === correctAnswerKey && styles.correctAnswerText, // Highlight correct answer text after submission
-                        isSubmitted && selectedAnswer === option.key && selectedAnswer !== correctAnswerKey && styles.incorrectAnswerText // Highlight incorrect selected answer text after submission
+                        selectedAnswer === option.key && styles.selectedOptionButtonText,
+                        isSubmitted && option.key === currentPassage.correctAnswerKey && styles.correctAnswerText,
+                        isSubmitted && selectedAnswer === option.key && selectedAnswer !== currentPassage.correctAnswerKey && styles.incorrectAnswerText
                     ]}>
-                        {`${option.key}. ${option.text}`} {/* Display option key and text */}
+                        {`${option.key}. ${option.text}`}
                     </Text>
                 </TouchableOpacity>
             ))}
         </View>
         {/* ------------------------------------ */}
 
+        {/* --- "Please scroll down for Explanation" message --- */}
+        {/* This message is now included in the Alert, so we can remove it from the UI if desired */}
+        {/* {isSubmitted && selectedAnswer !== currentPassage.correctAnswerKey ? ( // Show message if submitted and answer is incorrect
+            <Text style={styles.scrollDownMessage}>Please scroll down for Explanation</Text>
+        ) : null} */}
+        {/* ------------------------------------------------- */}
+
+
         {/* --- Explanation Area (Shown after incorrect submission) --- */}
-        {isSubmitted && !selectedAnswer === correctAnswerKey && showExplanation ? ( // Show explanation if submitted, answer is incorrect, and showExplanation is true
+        {isSubmitted && selectedAnswer !== currentPassage.correctAnswerKey && showExplanation && currentPassage.explanation ? ( // Show explanation if submitted, incorrect, showExplanation is true, AND explanation exists
             <View style={styles.explanationContainer}>
                 <Text style={styles.explanationTitle}>Explanation:</Text>
-                <Text style={styles.explanationText}>{explanationText}</Text>
-                {/* Optionally show correct answer text here again if needed */}
-                {/* <Text style={styles.explanationCorrectAnswer}>Correct Answer: {correctAnswerKey}. {correctAnswerText}</Text> */}
+                <Text style={styles.explanationText}>{currentPassage.explanation}</Text> {/* Display explanation from current passage */}
             </View>
         ) : null}
         {/* ------------------------------------------------------- */}
@@ -143,13 +216,13 @@ function DokkaiScreen({ navigation }) {
 
       </ScrollView>
 
-      {/* Container for the buttons at the bottom */}
-      <View style={styles.buttonContainer}>
+      {/* Container for the buttons at the bottom (Translate/Submit) */}
+      <View style={styles.bottomButtonContainer}> {/* Renamed style to differentiate */}
         {/* Translate Button */}
         <TouchableOpacity
             style={[styles.bottomButton, { backgroundColor: '#007BFF' }]}
             onPress={handleTranslate}
-            disabled={translatedText !== ''} // Disable translate button after translation is shown
+            disabled={translatedText !== ''}
         >
           <Text style={styles.bottomButtonText}>Translate</Text>
         </TouchableOpacity>
@@ -158,183 +231,267 @@ function DokkaiScreen({ navigation }) {
         <TouchableOpacity
             style={[
                 styles.bottomButton,
-                { backgroundColor: selectedAnswer !== null && !isSubmitted ? '#28A745' : '#A9A9A9', marginLeft: 10 } // Change submit button color based on selection and submission
+                { backgroundColor: selectedAnswer !== null && !isSubmitted ? '#28A745' : '#A9A9A9', marginLeft: 10 }
             ]}
             onPress={handleSubmit}
-            disabled={selectedAnswer === null || isSubmitted} // Disable submit button if no answer is selected or already submitted
+            disabled={selectedAnswer === null || isSubmitted}
         >
           <Text style={styles.bottomButtonText}>Submit</Text>
         </TouchableOpacity>
       </View>
+
+      {/* --- Previous and Next Buttons (Below content) --- */}
+      <View style={styles.passageNavButtonContainer}> {/* New container for passage nav buttons */}
+          {/* Previous Button */}
+          <TouchableOpacity
+              onPress={handlePreviousPassage}
+              style={[styles.passageNavButton, currentPassageIndex === 0 && styles.disabledButton]}
+              disabled={currentPassageIndex === 0}
+          >
+              <Text style={[styles.passageNavButtonText, currentPassageIndex === 0 && styles.disabledButtonText]}>Previous</Text>
+          </TouchableOpacity>
+
+          {/* Separator (Optional) */}
+          <View style={styles.passageNavButtonSeparator} />
+
+          {/* Next Button */}
+          <TouchableOpacity
+              onPress={handleNextPassage}
+              style={[styles.passageNavButton, currentPassageIndex === passagesForLevel.length - 1 && styles.disabledButton]}
+              disabled={currentPassageIndex === passagesForLevel.length - 1}
+          >
+              <Text style={[styles.passageNavButtonText, currentPassageIndex === passagesForLevel.length - 1 && styles.disabledButtonText]}>Next</Text>
+          </TouchableOpacity>
+      </View>
+      {/* ---------------------------------------------- */}
+
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, // Ensure the main container takes up available space
-    backgroundColor: '#bbbbbb', // Changed to a slightly darker grey
-    padding: 25, // Increased padding around the content
+    flex: 1,
+    backgroundColor: '#e0f7fa', // A pleasant light blue background
+    padding: 25,
   },
-  textContainer: {
-    flex: 1, // Allows the ScrollView to take up available space
-    marginBottom: 25, // Space between text/options and buttons
-    backgroundColor: '#ffffff', // White background for the reading area
-    borderRadius: 15, // More rounded corners
-    padding: 20, // Increased padding inside the reading area
-    shadowColor: '#000', // Add subtle shadow
-    shadowOffset: { width: 0, height: 4 }, // Increased shadow offset
-    shadowOpacity: 0.15, // Increased shadow opacity
-    shadowRadius: 5, // Increased shadow radius
-    elevation: 6, // Increased elevation for Android shadow
+  loadingContainer: { // Style for loading state
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#f0f0f0',
   },
-  dokkaiText: {
-    fontSize: 18, // Slightly larger font size
-    lineHeight: 28, // Increased line height for readability
-    color: '#222', // Darker text color
-    marginBottom: 25, // Increased space below the reading text before options
-    fontFamily: 'System', // Use system font (or a custom font if loaded)
-  },
-  translatedTextContainer: { // Style for the translated text area
-    marginTop: 25, // Increased space above translated text
-    paddingTop: 20,
-    borderTopColor: '#b2ebf2', // Light blue border above translation
-    borderTopWidth: 1,
-    marginBottom: 25, // Increased space below translated text before options
-  },
-  translatedTextTitle: { // Style for the "Translation:" title
-    fontSize: 18, // Slightly larger font size
-    fontWeight: 'bold',
-    marginBottom: 10, // Increased space below title
-    color: '#007BFF', // Blue color for title
-  },
-  translatedText: { // Style for the translated text content
-    fontSize: 17, // Slightly larger font size
-    lineHeight: 26,
-    color: '#444', // Slightly lighter text color
-    fontStyle: 'italic', // Optional: make translated text italic
-    fontFamily: 'System', // Use system font
-  },
-  optionsContainer: { // Container for multiple choice options
-      marginTop: 15, // Space above the options section
-      paddingTop: 20,
-      borderTopColor: '#ccc', // Border above options
-      borderTopWidth: 1,
-      marginBottom: 25, // Space below options before buttons
-  },
-  optionsTitle: { // Style for the "Choose your answer:" title
-      fontSize: 18, // Slightly larger font size
-      fontWeight: 'bold',
-      marginBottom: 15, // Increased space below title
+  loadingText: { // Style for loading text
+      fontSize: 18,
       color: '#555',
   },
-  optionButton: { // Style for each option button
-      borderColor: '#b0bec5', // Muted blue-grey border color
+  textContainer: {
+    flex: 1,
+    marginBottom: 25,
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  dokkaiText: {
+    fontSize: 18,
+    lineHeight: 28,
+    color: '#222',
+    marginBottom: 25,
+    fontFamily: 'System',
+  },
+  translatedTextContainer: {
+    marginTop: 25,
+    paddingTop: 20,
+    borderTopColor: '#b2ebf2',
+    borderTopWidth: 1,
+    marginBottom: 25,
+  },
+  translatedTextTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#007BFF',
+  },
+  translatedText: {
+    fontSize: 17,
+    lineHeight: 26,
+    color: '#444',
+    fontStyle: 'italic',
+    fontFamily: 'System',
+  },
+  questionText: { // Style for the question text
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 15, // Space below the question
+      color: '#333',
+  },
+  optionsContainer: {
+      marginTop: 15,
+      paddingTop: 20,
+      borderTopColor: '#ccc',
+      borderTopWidth: 1,
+      marginBottom: 25,
+  },
+  optionsTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 15,
+      color: '#555',
+  },
+  optionButton: {
+      borderColor: '#b0bec5',
       borderWidth: 1,
-      borderRadius: 10, // More rounded corners
-      padding: 15, // Increased padding
-      marginBottom: 15, // Increased space between option buttons
-      backgroundColor: '#ffffff', // White background for options
-      shadowColor: '#000', // Add subtle shadow to options
+      borderRadius: 10,
+      padding: 15,
+      marginBottom: 15,
+      backgroundColor: '#ffffff',
+      shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
       elevation: 3,
-      flexDirection: 'row', // Arrange text horizontally
-      alignItems: 'center', // Align text vertically
+      flexDirection: 'row',
+      alignItems: 'center',
   },
-  selectedOptionButton: { // Style for the selected option button
-      borderColor: '#007BFF', // Highlight border color
-      backgroundColor: '#e3f2fd', // Lighter blue background
-      borderWidth: 2, // Thicker border
-  },
-  correctAnswer: { // Style for the correct answer option after submission
-      borderColor: '#4CAF50', // Green border (Material Design Green)
-      backgroundColor: '#e8f5e9', // Very light green background
+  selectedOptionButton: {
+      borderColor: '#007BFF',
+      backgroundColor: '#e3f2fd',
       borderWidth: 2,
   },
-  incorrectAnswer: { // Style for the incorrect answer option after submission
-      borderColor: '#F44336', // Red border (Material Design Red)
-      backgroundColor: '#ffebee', // Very light red background
+  correctAnswer: {
+      borderColor: '#4CAF50',
+      backgroundColor: '#e8f5e9',
       borderWidth: 2,
   },
-  optionButtonText: { // Style for the text inside option buttons
-      fontSize: 17, // Slightly larger font size
+  incorrectAnswer: {
+      borderColor: '#F44336',
+      backgroundColor: '#ffebee',
+      borderWidth: 2,
+  },
+  optionButtonText: {
+      fontSize: 17,
       color: '#333',
-      flex: 1, // Allow text to take up space
+      flex: 1,
   },
-  selectedOptionButtonText: { // Style for the text inside selected option button
+  selectedOptionButtonText: {
       fontWeight: 'bold',
-      color: '#007BFF', // Highlight text color
+      color: '#007BFF',
   },
-  correctAnswerText: { // Style for the text inside the correct answer option after submission
+  correctAnswerText: {
       fontWeight: 'bold',
-      color: '#1b5e20', // Dark green text (Material Design Dark Green)
+      color: '#1b5e20',
   },
-  incorrectAnswerText: { // Style for the text inside the incorrect answer option after submission
+  incorrectAnswerText: {
       fontWeight: 'bold',
-      color: '#b71c1c', // Dark red text (Material Design Dark Red)
+      color: '#b71c1c',
   },
-  explanationContainer: { // Style for the explanation area
-      marginTop: 30, // Increased space above explanation
+  scrollDownMessage: { // Style for the scroll down message
+      fontSize: 15,
+      color: '#DC3545', // Red color for the message
+      textAlign: 'center',
+      marginTop: 10,
+      marginBottom: 10, // Space above explanation
+      fontStyle: 'italic',
+  },
+  explanationContainer: {
+      marginTop: 30,
       paddingTop: 25,
       borderTopColor: '#ccc',
       borderTopWidth: 1,
-      backgroundColor: '#fff9c4', // Light yellow background for explanation
-      padding: 20, // Increased padding
-      borderRadius: 10, // More rounded corners
-      shadowColor: '#000', // Add subtle shadow
+      backgroundColor: '#fff9c4',
+      padding: 20,
+      borderRadius: 10,
+      shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
       elevation: 3,
   },
-  explanationTitle: { // Style for the "Explanation:" title
-      fontSize: 18, // Slightly larger font size
+  explanationTitle: {
+      fontSize: 18,
       fontWeight: 'bold',
-      marginBottom: 10, // Increased space below title
-      color: '#fbc02d', // Dark yellow color for title
+      marginBottom: 10,
+      color: '#fbc02d',
   },
-  explanationText: { // Style for the explanation content
+  explanationText: {
       fontSize: 16,
       color: '#555',
       lineHeight: 24,
-      fontFamily: 'System', // Use system font
+      fontFamily: 'System',
   },
-  explanationCorrectAnswer: { // Optional style for correct answer text in explanation
+  explanationCorrectAnswer: {
       fontSize: 16,
       fontWeight: 'bold',
       marginTop: 8,
-      color: '#1b5e20', // Dark green text
+      color: '#1b5e20',
   },
-  buttonContainer: {
-    flexDirection: 'row', // Arrange buttons horizontally
-    justifyContent: 'space-around', // Distribute space around buttons
-    paddingVertical: 18, // Increased padding above and below buttons
-    borderTopColor: '#ccc', // Add a border line above buttons
+  bottomButtonContainer: { // Container for Translate/Submit buttons
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 18,
+    borderTopColor: '#ccc',
     borderTopWidth: 1,
-    backgroundColor: '#ffffff', // White background for the button container
-    paddingHorizontal: 15, // Add horizontal padding
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 15,
   },
-  bottomButton: {
-    flex: 1, // Allow buttons to grow and shrink
-    paddingVertical: 16, // Increased padding
-    borderRadius: 10, // More rounded corners
+  bottomButton: { // Style for Translate/Submit buttons
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 8, // Increased space between buttons
-    shadowColor: '#000', // Add subtle shadow to buttons
+    marginHorizontal: 8,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
-  bottomButtonText: {
+  bottomButtonText: { // Style for Translate/Submit button text
     color: 'white',
-    fontSize: 18, // Slightly larger font size
+    fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'System', // Use system font
+    fontFamily: 'System',
   },
+  passageNavButtonContainer: { // New container for Previous/Next buttons
+      flexDirection: 'row',
+      justifyContent: 'center', // Center the buttons
+      alignItems: 'center',
+      paddingVertical: 10, // Padding above and below buttons
+      marginTop: 10, // Space above this button container
+  },
+  passageNavButton: { // Style for Previous/Next buttons
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      borderRadius: 5,
+      // Optional: Add a subtle background or border
+      // backgroundColor: '#eee',
+      // borderColor: '#ccc',
+      // borderWidth: 1,
+  },
+  passageNavButtonText: { // Style for Previous/Next button text
+      fontSize: 15,
+      color: '#007BFF', // Blue color for active buttons
+      fontWeight: 'bold',
+  },
+  disabledButton: { // Style for disabled buttons
+      opacity: 0.5, // Reduce opacity
+  },
+  disabledButtonText: { // Style for disabled button text
+      color: '#999', // Grey out text
+  },
+  passageNavButtonSeparator: { // Style for separator between Previous/Next buttons
+      width: 1,
+      height: '80%',
+      backgroundColor: '#ccc',
+      marginHorizontal: 10,
+  }
 });
 
 export default DokkaiScreen; // Export the component to be used in navigation

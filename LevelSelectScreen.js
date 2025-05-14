@@ -1,7 +1,10 @@
-// LevelSelectScreen.js - This screen allows the user to select a JLPT level and navigates to Dokkai for N5.
+// LevelSelectScreen.js - This screen allows the user to select a JLPT level and passes it to Dokkai.
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native'; // Import necessary components
+
+// Import the passage data to check if a level has passages
+import dokkaiPassages from './dokkaiData';
 
 function LevelSelectScreen({ navigation }) { // React Navigation automatically passes the 'navigation' prop
 
@@ -10,16 +13,14 @@ function LevelSelectScreen({ navigation }) { // React Navigation automatically p
 
   // Function to handle a level button press
   const handleLevelSelect = (level) => {
-    // Check if the selected level is N5
-    if (level === 'N5') {
-      // Navigate to the Dokkai screen
-      navigation.navigate('Dokkai');
+    // Check if the selected level has any passages defined in dokkaiData.js
+    if (dokkaiPassages[level] && dokkaiPassages[level].length > 0) {
+      // Navigate to the Dokkai screen and pass the selected level as a parameter
+      navigation.navigate('Dokkai', { selectedLevel: level });
     } else {
-      // For other levels, show an alert for now
-      Alert.alert('Level Selected', `You selected JLPT ${level}. Dokkai for this level is not yet available.`);
+      // If the level has no passages, show an alert
+      Alert.alert('Level Not Available', `Dokkai passages for JLPT ${level} are not yet available.`);
     }
-    // Later, you would pass the selected level to the Dokkai screen
-    // navigation.navigate('Dokkai', { selectedLevel: level });
   };
 
   return (
